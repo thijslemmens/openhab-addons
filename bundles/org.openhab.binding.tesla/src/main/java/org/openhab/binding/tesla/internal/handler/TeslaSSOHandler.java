@@ -97,7 +97,7 @@ public class TeslaSSOHandler {
             response = request.send();
             return response;
         } catch (InterruptedException | TimeoutException | ExecutionException e) {
-            logger.debug("An exception occurred while invoking a HTTP request: '{}'", e.getMessage());
+            logger.debug("An exception occurred while invoking a HTTP request: '{}'", e);
             return null;
         }
     }

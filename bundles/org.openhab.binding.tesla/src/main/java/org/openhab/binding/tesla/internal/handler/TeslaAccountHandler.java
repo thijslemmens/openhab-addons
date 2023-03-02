@@ -81,7 +81,7 @@ public class TeslaAccountHandler extends BaseBridgeHandler {
     final WebTarget commandTarget;
     final WebTarget wakeUpTarget;
 
-    private final TeslaSSOHandler ssoHandler;
+    private TeslaSSOHandler ssoHandler;
     private final ThingTypeMigrationService thingTypeMigrationService;
 
     // Threading and Job related variables
@@ -99,10 +99,13 @@ public class TeslaAccountHandler extends BaseBridgeHandler {
     private TokenResponse logonToken;
     private final Set<VehicleListener> vehicleListeners = new HashSet<>();
 
+    private final HttpClientFactory httpClientFactory;
+
     public TeslaAccountHandler(Bridge bridge, Client teslaClient, HttpClientFactory httpClientFactory,
             ThingTypeMigrationService thingTypeMigrationService) {
         super(bridge);
         this.teslaTarget = teslaClient.target(URI_OWNERS);
+        this.httpClientFactory = httpClientFactory;
         this.ssoHandler = new TeslaSSOHandler(httpClientFactory.getCommonHttpClient());
         this.thingTypeMigrationService = thingTypeMigrationService;
 
@@ -296,6 +299,11 @@ public class TeslaAccountHandler extends BaseBridgeHandler {
             }
 
             this.logonToken = ssoHandler.getAccessToken(refreshToken);
+            if (this.logonToken == null) {
+                logger.debug("LogonToken null, retrying once with new TeslaSSOHandler");
+                this.ssoHandler = new TeslaSSOHandler(httpClientFactory.getCommonHttpClient());
+                this.logonToken = ssoHandler.getAccessToken(refreshToken);
+            }
             if (this.logonToken == null) {
                 return new ThingStatusInfo(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
                         "Failed to obtain access token for API.");
