@@ -66,7 +66,17 @@ public class TeslaSSOHandler {
         request.header(HttpHeader.CONTENT_TYPE, "application/json");
         request.method(HttpMethod.POST);
 
-        ContentResponse refreshResponse = executeHttpRequest(request);
+        ContentResponse refreshResponse = null;
+
+        for (int i = 0; i < 10 && refreshResponse == null; i++) {
+            logger.debug("Trying to refresh token attempt {}", i + 1);
+            refreshResponse = executeHttpRequest(request);
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
 
         if (refreshResponse != null && refreshResponse.getStatus() == 200) {
             String refreshTokenResponse = refreshResponse.getContentAsString();
@@ -97,7 +107,7 @@ public class TeslaSSOHandler {
             response = request.send();
             return response;
         } catch (InterruptedException | TimeoutException | ExecutionException e) {
-            logger.debug("An exception occurred while invoking a HTTP request: '{}'", e.getMessage());
+            logger.debug("An exception occurred while invoking a HTTP request: '{}'", e.getMessage(), e);
             return null;
         }
     }
