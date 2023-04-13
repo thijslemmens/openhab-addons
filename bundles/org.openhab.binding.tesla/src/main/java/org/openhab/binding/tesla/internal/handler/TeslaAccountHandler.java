@@ -103,7 +103,7 @@ public class TeslaAccountHandler extends BaseBridgeHandler {
             ThingTypeMigrationService thingTypeMigrationService) {
         super(bridge);
         this.teslaTarget = teslaClient.target(URI_OWNERS);
-        this.ssoHandler = new TeslaSSOHandler(httpClientFactory.getCommonHttpClient());
+        this.ssoHandler = new TeslaSSOHandler(httpClientFactory);
         this.thingTypeMigrationService = thingTypeMigrationService;
 
         this.vehiclesTarget = teslaTarget.path(API_VERSION).path(VEHICLES);
