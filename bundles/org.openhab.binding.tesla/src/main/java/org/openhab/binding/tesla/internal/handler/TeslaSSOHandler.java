@@ -30,6 +30,7 @@ import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
 import org.openhab.binding.tesla.internal.protocol.sso.RefreshTokenRequest;
 import org.openhab.binding.tesla.internal.protocol.sso.TokenResponse;
+import org.openhab.core.io.net.http.HttpClientFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,14 +44,14 @@ import com.google.gson.Gson;
 @NonNullByDefault
 public class TeslaSSOHandler {
 
-    private final HttpClient httpClient;
+    private final HttpClientFactory httpClientFactory;
     private final Gson gson = new Gson();
     private final Logger logger = LoggerFactory.getLogger(TeslaSSOHandler.class);
     private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
             .withZone(ZoneId.systemDefault());
 
-    public TeslaSSOHandler(HttpClient httpClient) {
-        this.httpClient = httpClient;
+    public TeslaSSOHandler(HttpClientFactory httpClientFactory) {
+        this.httpClientFactory = httpClientFactory;
     }
 
     @Nullable
@@ -61,12 +62,30 @@ public class TeslaSSOHandler {
         RefreshTokenRequest refreshRequest = new RefreshTokenRequest(refreshToken);
         String refreshTokenPayload = gson.toJson(refreshRequest);
 
+        HttpClient httpClient = httpClientFactory.createHttpClient("teslaSSOClient");
+        if (!httpClient.isStarted()) {
+            try {
+                httpClient.start();
+            } catch (Exception e) {
+                logger.debug("Exception while starting httpClient");
+            }
+        }
         final org.eclipse.jetty.client.api.Request request = httpClient.newRequest(URI_SSO + "/" + PATH_TOKEN);
+
         request.content(new StringContentProvider(refreshTokenPayload));
         request.header(HttpHeader.CONTENT_TYPE, "application/json");
         request.method(HttpMethod.POST);
 
         ContentResponse refreshResponse = executeHttpRequest(request);
+
+        if (httpClient.isStarted()) {
+            try {
+                httpClient.stop();
+                httpClient.destroy();
+            } catch (Exception e) {
+                logger.debug("Exception while stopping httpClient");
+            }
+        }
 
         if (refreshResponse != null && refreshResponse.getStatus() == 200) {
             String refreshTokenResponse = refreshResponse.getContentAsString();
